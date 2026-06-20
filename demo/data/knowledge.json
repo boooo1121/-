@@ -1,0 +1,407 @@
+[
+  {
+    "trigger_words": ["天黑", "自动亮灯", "光控灯", "感光灯"],
+    "boost_words": ["台灯", "照明", "光线暗", "晚上", "夜灯", "路灯", "感应灯", "小夜灯"],
+    "title": "天黑自动亮灯",
+    "intro": "光线变暗时自动点亮 LED，天亮自动熄灭",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "光敏电阻模块", "qty": 1, "note": "读取环境光线强度", "connector": "排针公" },
+      { "name": "LED（任意颜色）", "qty": 1, "note": "5mm 或 3mm 直插 LED" },
+      { "name": "220Ω 电阻", "qty": 1, "note": "LED 限流电阻" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "光敏电阻模块 AO", "to": "GPIO36 (ADC0)", "location": "板子左侧第3排，标有 '36' / 'SVP'" },
+      { "from": "光敏电阻模块 VCC", "to": "3.3V", "location": "板子左上角标有 '3V3'" },
+      { "from": "光敏电阻模块 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "LED 正极（长脚）", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "LED 负极（短脚）", "to": "GND（串联220Ω电阻）", "location": "电阻一端接 LED 负极，另一端接 GND" }
+    ],
+    "code": "from machine import Pin, ADC\nimport time\n\n# 初始化光敏电阻（ADC）\nldr = ADC(Pin(36))  # GPIO36 = ADC0\nldr.atten(3)        # 0-3.6V 量程\n\n# 初始化 LED\nled = Pin(5, Pin.OUT)\n\n# 阈值（根据实际环境调整）\nTHRESHOLD = 2500\n\ndef main():\n    print(\"天黑自动亮灯已启动...\")\n    while True:\n        value = ldr.read()\n        if value < THRESHOLD:\n            led.on()\n            print(f\"光线暗 ({value}) → LED 亮\")\n        else:\n            led.off()\n            print(f\"光线足 ({value}) → LED 灭\")\n        time.sleep(0.5)\n\nmain()\n",
+    "next_steps": [
+      "将 LED 对着环境光，用手遮挡光敏电阻，观察 LED 是否亮起",
+      "如果灵敏度不合适，在代码中调整 THRESHOLD 值（范围 0-4095）",
+      "用热熔胶把组件固定在灯罩内即可长期使用"
+    ],
+    "troubleshooting": [
+      { "symptom": "LED 不亮", "checks": [
+        "检查 LED 正负极是否插反（长脚接 GPIO5，短脚通过电阻接 GND）",
+        "确认 220Ω 电阻已串联在 LED 回路中",
+        "测量光敏电阻模块 VCC/GND 是否有 3.3V 电压"
+      ]},
+      { "symptom": "LED 常亮不灭", "checks": [
+        "检查光敏电阻感光面是否被遮挡",
+        "调低 THRESHOLD 值（例如改为 1500）",
+        "检查 AO 引脚是否接到 GPIO36"
+      ]}
+    ]
+  },
+  {
+    "trigger_words": ["自动浇花", "浇水", "浇花"],
+    "boost_words": ["植物", "花盆", "土壤湿度", "自动灌溉", "盆栽", "滴灌", "定时浇水", "湿度检测"],
+    "title": "自动浇花",
+    "intro": "检测土壤湿度，干燥时自动启动水泵浇水",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "土壤湿度传感器", "qty": 1, "note": "LM393 土壤湿度检测模块", "connector": "排针公" },
+      { "name": "微型潜水泵", "qty": 1, "note": "3-5V 微型水泵，带软管" },
+      { "name": "继电器模块", "qty": 1, "note": "单路 5V 低电平触发继电器", "connector": "排针公" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "土壤湿度传感器 AO", "to": "GPIO36 (ADC0)", "location": "板子左侧第3排，标有 '36' / 'SVP'" },
+      { "from": "土壤湿度传感器 VCC", "to": "3.3V", "location": "板子左上角标有 '3V3'" },
+      { "from": "土壤湿度传感器 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "继电器 IN", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "继电器 VCC", "to": "5V", "location": "板子左上角标有 '5V'" },
+      { "from": "继电器 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "水泵正极（红）", "to": "继电器 NO（常开端）", "location": "继电器上标有 'NO'" },
+      { "from": "水泵负极（黑）", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "继电器 COM（公共端）", "to": "5V（外部电源或板子5V）", "location": "继电器上标有 'COM'" }
+    ],
+    "code": "from machine import Pin, ADC\nimport time\n\n# 初始化土壤湿度传感器\nmoisture = ADC(Pin(36))\nmoisture.atten(3)\n\n# 初始化继电器（控制水泵）\npump = Pin(5, Pin.OUT)\npump.off()  # 初始关闭水泵\n\n# 阈值（根据实际土壤调整）\nDRY_THRESHOLD = 3000   # 干燥阈值\nWET_THRESHOLD = 2000   # 湿润阈值（防止频繁启停）\n\ndef main():\n    print(\"自动浇花已启动...\")\n    while True:\n        value = moisture.read()\n        print(f\"土壤湿度值: {value}\")\n        if value > DRY_THRESHOLD:\n            print(\"土壤干燥，启动水泵\")\n            pump.on()\n            time.sleep(2)  # 浇水2秒\n            pump.off()\n            print(\"浇水完成\")\n        else:\n            pump.off()\n        time.sleep(5)  # 每5秒检测一次\n\nmain()\n",
+    "next_steps": [
+      "将土壤湿度传感器插入花盆土壤中（不要完全浸没）",
+      "将水泵软管放入水源（水桶），出水管插入花盆",
+      "调整 DRY_THRESHOLD 值适应不同土壤类型"
+    ],
+    "troubleshooting": [
+      { "symptom": "水泵不转", "checks": [
+        "检查继电器是否正常吸合（有滴答声）",
+        "确认水泵供电电压是否为 3-5V",
+        "检查 NO 和 COM 引脚接线是否正确"
+      ]},
+      { "symptom": "一直浇水不停", "checks": [
+        "检查土壤湿度传感器是否完全插入土壤",
+        "调低 DRY_THRESHOLD 值",
+        "检查传感器是否损坏（放入水中测值应明显变化）"
+      ]}
+    ]
+  },
+  {
+    "trigger_words": ["温湿度计", "温湿度", "DHT11"],
+    "boost_words": ["温度", "湿度", "环境监测", "温室", "气象站", "室内", "温控", "温湿度检测"],
+    "title": "温湿度计",
+    "intro": "实时测量环境温湿度，通过串口显示",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "DHT11 温湿度传感器", "qty": 1, "note": "3 脚 DHT11 模块", "connector": "排针公" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "DHT11 DATA", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "DHT11 VCC", "to": "3.3V", "location": "板子左上角标有 '3V3'" },
+      { "from": "DHT11 GND", "to": "GND", "location": "板子左上角标有 'GND'" }
+    ],
+    "code": "from machine import Pin\nimport time\n\n# DHT11 驱动（单总线协议）\nclass DHT11:\n    def __init__(self, pin):\n        self.pin = Pin(pin, Pin.OUT)\n        self.pin.on()\n        time.sleep(1)\n    \n    def _wait_for(self, level, timeout_us):\n        start = time.ticks_us()\n        while self.pin.value() != level:\n            if time.ticks_diff(time.ticks_us(), start) > timeout_us:\n                return False\n        return True\n    \n    def read(self):\n        # 发送起始信号\n        self.pin = Pin(5, Pin.OUT)\n        self.pin.off()\n        time.sleep_ms(18)\n        self.pin.on()\n        time.sleep_us(40)\n        self.pin = Pin(5, Pin.IN)\n        \n        # 等待响应\n        if not self._wait_for(0, 100): return None\n        if not self._wait_for(1, 100): return None\n        if not self._wait_for(0, 100): return None\n        \n        # 读取40位数据\n        data = []\n        for i in range(40):\n            if not self._wait_for(1, 70): return None\n            start = time.ticks_us()\n            if not self._wait_for(0, 100): return None\n            duration = time.ticks_diff(time.ticks_us(), start)\n            data.append(1 if duration > 40 else 0)\n        \n        # 解析\n        humid = data[0]*128 + data[1]*64 + data[2]*32 + data[3]*16 + data[4]*8 + data[5]*4 + data[6]*2 + data[7]\n        temp = data[16]*128 + data[17]*64 + data[18]*32 + data[19]*16 + data[20]*8 + data[21]*4 + data[22]*2 + data[23]\n        \n        # 校验\n        checksum = 0\n        for i in range(0, 32, 8):\n            checksum += data[i]*128 + data[i+1]*64 + data[i+2]*32 + data[i+3]*16 + data[i+4]*8 + data[i+5]*4 + data[i+6]*2 + data[i+7]\n        checksum &= 0xFF\n        calc_checksum = sum(data[32:40][j] << (7-j) for j in range(8)) & 0xFF\n        \n        if checksum != calc_checksum:\n            return None\n        return (temp, humid)\n\ndht = DHT11(5)\n\ndef main():\n    print(\"温湿度计已启动...\")\n    while True:\n        result = dht.read()\n        if result:\n            temp, humid = result\n            print(f\"温度: {temp}°C, 湿度: {humid}%\")\n        else:\n            print(\"读取失败，重试中...\")\n        time.sleep(2)\n\nmain()\n",
+    "next_steps": [
+      "通过串口监视器查看温湿度数据（Thonny Shell 或 PuTTY）",
+      "可加装 OLED 显示屏实时显示（需修改代码添加 SSD1306 驱动）",
+      "调整采样间隔以延长传感器寿命"
+    ],
+    "troubleshooting": [
+      { "symptom": "一直返回读取失败", "checks": [
+        "检查 DHT11 三根线是否接对（DATA → GPIO5）",
+        "尝试更换一个 DHT11 传感器（部分早期批次兼容性差）",
+        "缩短杜邦线长度，减少干扰"
+      ]},
+      { "symptom": "温湿度数值异常", "checks": [
+        "确认传感器没有靠近热源或水汽",
+        "手指捏住传感器观察温度是否上升",
+        "每次读取间隔至少 1 秒，DHT11 采样频率限制 1Hz"
+      ]}
+    ]
+  },
+  {
+    "trigger_words": ["小风扇", "风扇", "散热"],
+    "boost_words": ["桌面风扇", "温控风扇", "USB风扇", "降温", "电机", "温度控制", "DHT11", "自动风扇"],
+    "title": "桌面小风扇（温度控制）",
+    "intro": "检测环境温度，超过阈值自动启动风扇降温",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "DHT11 温湿度传感器", "qty": 1, "note": "检测环境温度", "connector": "排针公" },
+      { "name": "5V 直流风扇", "qty": 1, "note": "5cm 电脑散热风扇或 USB 小风扇" },
+      { "name": "继电器模块", "qty": 1, "note": "单路 5V 低电平触发", "connector": "排针公" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "DHT11 DATA", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "DHT11 VCC", "to": "3.3V", "location": "板子左上角标有 '3V3'" },
+      { "from": "DHT11 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "继电器 IN", "to": "GPIO18", "location": "板子右侧第3排，标有 '18'" },
+      { "from": "继电器 VCC", "to": "5V", "location": "板子左上角标有 '5V'" },
+      { "from": "继电器 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "风扇正极（红）", "to": "继电器 NO", "location": "继电器上标有 'NO'" },
+      { "from": "风扇负极（黑）", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "继电器 COM", "to": "5V（外部电源）", "location": "继电器上标有 'COM'" }
+    ],
+    "code": "from machine import Pin\nimport time\n\n# ---- DHT11 驱动（同上） ----\nclass DHT11:\n    def __init__(self, pin):\n        self.pin = Pin(pin, Pin.OUT)\n        self.pin.on()\n        time.sleep(1)\n    def _wait_for(self, level, timeout_us):\n        start = time.ticks_us()\n        while self.pin.value() != level:\n            if time.ticks_diff(time.ticks_us(), start) > timeout_us:\n                return False\n        return True\n    def read(self):\n        self.pin = Pin(5, Pin.OUT)\n        self.pin.off()\n        time.sleep_ms(18)\n        self.pin.on()\n        time.sleep_us(40)\n        self.pin = Pin(5, Pin.IN)\n        if not self._wait_for(0, 100): return None\n        if not self._wait_for(1, 100): return None\n        if not self._wait_for(0, 100): return None\n        data = []\n        for i in range(40):\n            if not self._wait_for(1, 70): return None\n            start = time.ticks_us()\n            if not self._wait_for(0, 100): return None\n            duration = time.ticks_diff(time.ticks_us(), start)\n            data.append(1 if duration > 40 else 0)\n        humid = data[0]*128 + data[1]*64 + data[2]*32 + data[3]*16 + data[4]*8 + data[5]*4 + data[6]*2 + data[7]\n        temp = data[16]*128 + data[17]*64 + data[18]*32 + data[19]*16 + data[20]*8 + data[21]*4 + data[22]*2 + data[23]\n        checksum = 0\n        for i in range(0, 32, 8):\n            checksum += data[i]*128 + data[i+1]*64 + data[i+2]*32 + data[i+3]*16 + data[i+4]*8 + data[i+5]*4 + data[i+6]*2 + data[i+7]\n        checksum &= 0xFF\n        calc_checksum = sum(data[32:40][j] << (7-j) for j in range(8)) & 0xFF\n        if checksum != calc_checksum: return None\n        return (temp, humid)\n\n# 初始化\nfan = Pin(18, Pin.OUT)\nfan.off()\ndht = DHT11(5)\n\nTEMP_THRESHOLD = 28  # 28°C 以上启动风扇\n\ndef main():\n    print(\"温控风扇已启动...\")\n    while True:\n        result = dht.read()\n        if result:\n            temp, humid = result\n            print(f\"温度: {temp}°C\")\n            if temp >= TEMP_THRESHOLD:\n                fan.on()\n                print(f\"温度 {temp}°C ≥ {TEMP_THRESHOLD}°C → 风扇启动\")\n            else:\n                fan.off()\n                print(f\"温度 {temp}°C < {TEMP_THRESHOLD}°C → 风扇关闭\")\n        time.sleep(3)\n\nmain()\n",
+    "next_steps": [
+      "调整 TEMP_THRESHOLD 值改变启动温度",
+      "可增加手动按钮控制风扇启停",
+      "风扇供电不足时使用外部 5V 电源"
+    ],
+    "troubleshooting": [
+      { "symptom": "风扇不转", "checks": [
+        "检查继电器是否吸合",
+        "确认风扇供电电压足够（部分风扇需5V/500mA以上）",
+        "尝试用手拨动扇叶，检查是否卡死"
+      ]},
+      { "symptom": "风扇一直转不停", "checks": [
+        "DHT11 是否靠近热源导致读数偏高",
+        "调高 TEMP_THRESHOLD 值",
+        "检查 DHT11 读数是否正常"
+      ]}
+    ]
+  },
+  {
+    "trigger_words": ["音乐盒", "播放音乐", "蜂鸣器"],
+    "boost_words": ["按钮", "旋律", "生日歌", "音乐", "发声", "叮咚", "门铃", "曲子"],
+    "title": "音乐盒（按钮触发播放）",
+    "intro": "按下按钮播放一段旋律",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "无源蜂鸣器", "qty": 1, "note": "5V 无源蜂鸣器（非有源）", "connector": "排针公" },
+      { "name": "轻触按钮", "qty": 1, "note": "6x6mm 四脚轻触开关" },
+      { "name": "10KΩ 电阻", "qty": 1, "note": "按钮上拉电阻" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "蜂鸣器正极（+）", "to": "GPIO18", "location": "板子右侧第3排，标有 '18'" },
+      { "from": "蜂鸣器负极（-）", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "按钮一脚", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "按钮另一脚", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "GPIO5 到 3.3V", "to": "经 10KΩ 上拉", "location": "面包板上接10KΩ电阻到3.3V（内部可启用上拉）" }
+    ],
+    "code": "from machine import Pin, PWM\nimport time\n\n# 音符频率（Hz）\nNOTES = {\n    'C4': 262, 'D4': 294, 'E4': 330, 'F4': 349,\n    'G4': 392, 'A4': 440, 'B4': 494, 'C5': 523,\n    'D5': 587, 'E5': 659, 'F5': 698, 'G5': 784,\n    'A5': 880, 'B5': 988, 'R': 0\n}\n\n# 小星星旋律\nMELODY = [\n    ('C4', 0.5), ('C4', 0.5), ('G4', 0.5), ('G4', 0.5),\n    ('A4', 0.5), ('A4', 0.5), ('G4', 1.0),\n    ('F4', 0.5), ('F4', 0.5), ('E4', 0.5), ('E4', 0.5),\n    ('D4', 0.5), ('D4', 0.5), ('C4', 1.0),\n]\n\nbuzzer = PWM(Pin(18))\nbtn = Pin(5, Pin.IN, Pin.PULL_UP)\n\ndef play_note(note, duration):\n    if note == 'R':\n        buzzer.duty(0)\n    else:\n        buzzer.freq(NOTES[note])\n        buzzer.duty(512)  # 50% 占空比\n    time.sleep(duration)\n    buzzer.duty(0)\n    time.sleep(0.05)\n\ndef play_melody():\n    for note, dur in MELODY:\n        play_note(note, dur)\n\ndef main():\n    print(\"音乐盒已启动，请按按钮...\")\n    last_state = 1\n    while True:\n        state = btn.value()\n        if last_state == 1 and state == 0:  # 下降沿（按下）\n            print(\"按钮按下 → 播放音乐\")\n            play_melody()\n            print(\"播放完成\")\n        last_state = state\n        time.sleep(0.05)\n\nmain()\n",
+    "next_steps": [
+      "更换 MELODY 数组可播放不同旋律",
+      "增加电位器调节播放速度",
+      "可加装 LED 随音乐闪烁"
+    ],
+    "troubleshooting": [
+      { "symptom": "没有声音", "checks": [
+        "确认是无源蜂鸣器（有源蜂鸣器只能发单音）",
+        "检查蜂鸣器正负极是否接反",
+        "PWM 频率是否在蜂鸣器响应范围内"
+      ]},
+      { "symptom": "按钮没反应", "checks": [
+        "确认按钮接的是 GPIO5 和 GND",
+        "检查 PULL_UP 是否启用，或外接上拉电阻",
+        "杜邦线是否接触良好"
+      ]}
+    ]
+  },
+  {
+    "trigger_words": ["驱猫", "驱猫器", "赶猫"],
+    "boost_words": ["猫咪", "动物驱赶", "超声波", "花园", "阳台", "PIR", "人体感应", "驱赶"],
+    "title": "驱猫器",
+    "intro": "检测到猫靠近时发出 34kHz 超声波驱赶",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "PIR 人体红外传感器", "qty": 1, "note": "HC-SR501 人体感应模块", "connector": "排针公" },
+      { "name": "超声波蜂鸣器", "qty": 1, "note": "压电式蜂鸣器，可驱动至 34kHz", "connector": "排针公" },
+      { "name": "S8050 NPN 三极管", "qty": 1, "note": "驱动超声波蜂鸣器用" },
+      { "name": "1KΩ 电阻", "qty": 1, "note": "三极管基极限流" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "PIR 传感器 OUT", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "PIR 传感器 VCC", "to": "5V", "location": "板子左上角标有 '5V'" },
+      { "from": "PIR 传感器 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "蜂鸣器正极", "to": "5V（经三极管开关）", "location": "S8050 集电极接蜂鸣器负极，发射极接 GND" },
+      { "from": "三极管基极", "to": "GPIO18（经1KΩ电阻）", "location": "板子右侧第3排，标有 '18'" }
+    ],
+    "code": "from machine import Pin, PWM\nimport time\n\npir = Pin(5, Pin.IN)\nbuzzer_pwm = PWM(Pin(18))\n\n# 超声波频率 34kHz（猫敏感频段）\nULTRASONIC_FREQ = 34000\n\ndef main():\n    print(\"驱猫器已启动...\")\n    triggered = False\n    while True:\n        if pir.value() == 1:\n            if not triggered:\n                print(\"检测到移动！启动超声波...\")\n                triggered = True\n            buzzer_pwm.freq(ULTRASONIC_FREQ)\n            buzzer_pwm.duty(256)\n        else:\n            if triggered:\n                print(\"无人/动物移动，关闭超声波\")\n                triggered = False\n            buzzer_pwm.duty(0)\n        time.sleep(0.1)\n\nmain()\n",
+    "next_steps": [
+      "调整 PIR 传感器上的两个电位器：左边调检测距离（3-7米），右边调延时（最小）",
+      "34kHz 人耳听不到，可用手机麦克风频率检测 App 确认是否工作",
+      "驱猫器需固定安装，PIR 传感器对猫移动方向敏感"
+    ],
+    "troubleshooting": [
+      { "symptom": "蜂鸣器不响", "checks": [
+        "确认蜂鸣器是压电式（容性负载），普通蜂鸣器无法响应 34kHz",
+        "检查三极管基极 1KΩ 电阻是否接好",
+        "先用 4kHz 测试蜂鸣器是否工作"
+      ]},
+      { "symptom": "PIR 灵敏度太低/太高", "checks": [
+        "调节 PIR 模块上的灵敏度电位器",
+        "PIR 对横向移动更敏感，调整安装方向",
+        "避免 PIR 正对空调/暖气出风口"
+      ]}
+    ]
+  },
+  {
+    "trigger_words": ["生日礼物", "礼物盒", "惊喜盒子"],
+    "boost_words": ["生日", "OLED", "跑马灯", "音乐", "蜂鸣器", "LED灯带", "微动开关", "盒子", "祝福"],
+    "title": "生日礼物盒",
+    "intro": "打开盒子 → 跑马灯亮起 + 生日快乐旋律 + OLED 显示祝福语",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "微动开关", "qty": 1, "note": "检测盒子是否打开", "connector": "排针公" },
+      { "name": "LED 灯带（3 颗）", "qty": 1, "note": "3 颗 WS2812/Neopixel LED 灯珠" },
+      { "name": "无源蜂鸣器", "qty": 1, "note": "5V 无源蜂鸣器" },
+      { "name": "0.96 寸 OLED 显示屏", "qty": 1, "note": "SSD1306 I2C 接口", "connector": "排针公" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "微动开关一脚", "to": "GPIO5（内部上拉）", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "微动开关另一脚", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "LED 灯带 DIN", "to": "GPIO18", "location": "板子右侧第3排，标有 '18'" },
+      { "from": "LED 灯带 VCC", "to": "5V", "location": "板子左上角标有 '5V'" },
+      { "from": "LED 灯带 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "蜂鸣器正极（+）", "to": "GPIO19", "location": "板子右侧第4排，标有 '19'" },
+      { "from": "蜂鸣器负极（-）", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "OLED SDA", "to": "GPIO21", "location": "板子右侧第7排，标有 '21'" },
+      { "from": "OLED SCL", "to": "GPIO22", "location": "板子右侧第8排，标有 '22'" },
+      { "from": "OLED VCC", "to": "3.3V", "location": "板子左上角标有 '3V3'" },
+      { "from": "OLED GND", "to": "GND", "location": "板子左上角标有 'GND'" }
+    ],
+    "code": "from machine import Pin, PWM, SoftI2C\nimport neopixel\nimport time\n\n# ---- 引脚初始化 ----\nmicro_switch = Pin(5, Pin.IN, Pin.PULL_UP)\nnp = neopixel.NeoPixel(Pin(18), 3)  # 3颗 RGB LED\nbuzzer = PWM(Pin(19))\n\n# ---- 音符 ----\nNOTES = {'C4':262,'D4':294,'E4':330,'F4':349,'G4':392,'A4':440,'B4':494,'C5':523}\nMELODY = [('C4',0.3),('C4',0.3),('G4',0.3),('G4',0.3),('A4',0.3),('A4',0.3),('G4',0.6)]\n\n# ---- 颜色 ----\nRED = (255,0,0); GREEN = (0,255,0); BLUE = (0,0,255)\nYELLOW = (255,255,0); WHITE = (255,255,255)\n\ndef play_tone(freq, dur):\n    if freq == 0:\n        buzzer.duty(0)\n    else:\n        buzzer.freq(freq)\n        buzzer.duty(512)\n    time.sleep(dur)\n    buzzer.duty(0)\n    time.sleep(0.05)\n\ndef led_chase():\n    colors = [RED, GREEN, BLUE, YELLOW, WHITE]\n    for _ in range(3):\n        for c in colors:\n            for i in range(3):\n                np[i] = c\n            np.write()\n            time.sleep(0.15)\n\ndef play_birthday():\n    for note, dur in MELODY:\n        play_tone(NOTES.get(note, 0), dur)\n\ndef main():\n    print(\"生日礼物盒已启动，等待打开...\")\n    last_state = 1\n    while True:\n        state = micro_switch.value()\n        if last_state == 1 and state == 0:  # 盒子打开\n            print(\"盒子打开！启动庆祝！\")\n            led_chase()\n            play_birthday()\n            # 如有OLED，可显示 \"Happy Birthday!\"\n            time.sleep(5)\n            # 复位灯\n            for i in range(3):\n                np[i] = (0,0,0)\n            np.write()\n        last_state = state\n        time.sleep(0.05)\n\nmain()\n",
+    "next_steps": [
+      "将 LED 灯带贴在盒盖内沿，OLED 嵌在盒面",
+      "微动开关安装在盒扣位置，盖子打开即触发",
+      "可自定义 OLED 显示内容和 LED 跑马灯颜色"
+    ],
+    "troubleshooting": [
+      { "symptom": "打开盖子没反应", "checks": [
+        "检查微动开关接线（GPIO5 到 GND，启用内部上拉）",
+        "确认 NeoPixel 灯带 VCC 接 5V 而非 3.3V",
+        "WS2812 数据线最好不超过 30cm"
+      ]},
+      { "symptom": "LED 灯带不亮", "checks": [
+        "确认灯带 DIN 接到 GPIO18",
+        "检查 5V 供电是否充足（3 颗 LED 约 60mA）",
+        "部分 Neopixel 需要外部电容滤波"
+      ]}
+    ],
+    "prerequisite": "需要自备 WS2812 Neopixel 灯带（淘宝搜'WS2812 灯条'，3-5 颗灯珠足够）"
+  },
+  {
+    "trigger_words": ["吃药提醒", "吃药", "药盒"],
+    "boost_words": ["提醒", "定时", "蜂鸣器", "RTC", "时钟", "按停", "闹钟", "药品"],
+    "title": "吃药提醒装置",
+    "intro": "到设定时间蜂鸣器响，按按钮停止，否则每 5 分钟再响",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "RTC 时钟模块", "qty": 1, "note": "DS3231 I2C 高精度时钟", "connector": "排针公" },
+      { "name": "有源蜂鸣器", "qty": 1, "note": "5V 有源蜂鸣器（高电平触发）", "connector": "排针公" },
+      { "name": "轻触按钮", "qty": 1, "note": "确认已吃药的停止按钮" },
+      { "name": "10KΩ 电阻", "qty": 1, "note": "按钮上拉" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "DS3231 SDA", "to": "GPIO21", "location": "板子右侧第7排，标有 '21'" },
+      { "from": "DS3231 SCL", "to": "GPIO22", "location": "板子右侧第8排，标有 '22'" },
+      { "from": "DS3231 VCC", "to": "3.3V", "location": "板子左上角标有 '3V3'" },
+      { "from": "DS3231 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "蜂鸣器正极（+）", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "蜂鸣器负极（-）", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "按钮一脚", "to": "GPIO18（内部上拉）", "location": "板子右侧第3排，标有 '18'" },
+      { "from": "按钮另一脚", "to": "GND", "location": "板子左上角标有 'GND'" }
+    ],
+    "code": "from machine import Pin, RTC, SoftI2C\nimport time\n\n# ---- DS3231 RTC 驱动（简化） ----\nDS3231_I2C_ADDR = 0x68\n\ni2c = SoftI2C(scl=Pin(22), sda=Pin(21))\nbuzzer = Pin(5, Pin.OUT)\nbtn = Pin(18, Pin.IN, Pin.PULL_UP)\n\n# 提醒时间（24小时制）\nALARM_HOUR = 8\nALARM_MINUTE = 0\n\nis_alarming = False\nalarm_acked = False\nlast_ack_time = 0\n\ndef read_time():\n    # 简化时间读取 - 需实际 DS3231\n    # 使用 ESP32 内部 RTC 模拟\n    from machine import RTC\n    rtc = RTC()\n    return rtc.datetime()  # (year, month, day, weekday, hour, minute, second, us)\n\ndef set_alarm_time(h, m):\n    # 设置 ESP32 内部 RTC（首次需要 NTP 或手动设置）\n    pass\n\ndef main():\n    print(\"吃药提醒已启动，设置提醒: 08:00\")\n    while True:\n        now = read_time()\n        hour, minute = now[4], now[5]\n        \n        # 检查是否到提醒时间\n        if hour == ALARM_HOUR and minute == ALARM_MINUTE:\n            if not is_alarming:\n                print(f\"⚠ 到时间了！请吃药！\")\n                is_alarming = True\n                alarm_acked = False\n        \n        # 响铃逻辑\n        if is_alarming and not alarm_acked:\n            buzzer.on()\n            if btn.value() == 0:  # 按钮按下\n                time.sleep_ms(50)  # 消抖\n                if btn.value() == 0:\n                    print(\"✓ 已确认吃药\")\n                    buzzer.off()\n                    alarm_acked = True\n                    is_alarming = False\n                    while btn.value() == 0:  # 等待松手\n                        time.sleep_ms(10)\n        else:\n            buzzer.off()\n        \n        # 如果过了一分钟还没确认，下次循环会重新响铃\n        if is_alarming and not alarm_acked and minute != ALARM_MINUTE:\n            print(\"未确认 → 5 分钟后再次提醒\")\n            time.sleep(300)  # 5分钟后再次检查\n        \n        time.sleep(1)\n\nmain()\n",
+    "next_steps": [
+      "首运行需通过 NTP 或手动设置 RTC 时间",
+      "修改 ALARM_HOUR 和 ALARM_MINUTE 设定提醒时间",
+      "可添加 OLED 显示当前时间和下次吃药时间"
+    ],
+    "troubleshooting": [
+      { "symptom": "蜂鸣器一直响不停止", "checks": [
+        "检查按钮接线（GPIO18 到 GND）",
+        "检查内部上拉是否启用（PULL_UP）",
+        "按钮按下时 GPIO18 是否变为低电平"
+      ]},
+      { "symptom": "时间不准确", "checks": [
+        "DS3231 需要首次设置时间",
+        "确认 i2c 地址 0x68 是否正确",
+        "DS3231 电池是否安装（CR2032）"
+      ]}
+    ],
+    "prerequisite": "需要 DS3231 模块（淘宝约 ¥5）和 CR2032 纽扣电池"
+  },
+  {
+    "trigger_words": ["鱼缸喂食", "喂食器", "自动喂鱼"],
+    "boost_words": ["鱼缸", "喂鱼", "步进电机", "定时", "RTC", "自动投喂", "饲料", "养鱼"],
+    "title": "鱼缸自动喂食器",
+    "intro": "每天固定时间自动旋转饲料仓投喂鱼食",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "步进电机", "qty": 1, "note": "28BYJ-48 5V 步进电机", "connector": "排针公" },
+      { "name": "ULN2003 驱动板", "qty": 1, "note": "步进电机驱动板", "connector": "排针公" },
+      { "name": "RTC 时钟模块", "qty": 1, "note": "DS3231 I2C 时钟", "connector": "排针公" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "ULN2003 IN1", "to": "GPIO5", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "ULN2003 IN2", "to": "GPIO18", "location": "板子右侧第3排，标有 '18'" },
+      { "from": "ULN2003 IN3", "to": "GPIO19", "location": "板子右侧第4排，标有 '19'" },
+      { "from": "ULN2003 IN4", "to": "GPIO21", "location": "板子右侧第7排，标有 '21'" },
+      { "from": "ULN2003 VCC", "to": "5V", "location": "板子左上角标有 '5V'" },
+      { "from": "ULN2003 GND", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "DS3231 SDA", "to": "GPIO22", "location": "板子右侧第8排，标有 '22'" },
+      { "from": "DS3231 SCL", "to": "GPIO21", "location": "与步进电机 IN4 共用 GPIO21（需注意冲突，建议改用 GPIO4 / GPIO6）" }
+    ],
+    "code": "from machine import Pin\nimport time\n\n# ---- 28BYJ-48 步进电机驱动 ----\n# 半步序列\nSEQ = [\n    [1,0,0,0], [1,1,0,0], [0,1,0,0], [0,1,1,0],\n    [0,0,1,0], [0,0,1,1], [0,0,0,1], [1,0,0,1]\n]\n\npins = [Pin(5, Pin.OUT), Pin(18, Pin.OUT), Pin(19, Pin.OUT), Pin(21, Pin.OUT)]\n\ndef step_once(direction=1):\n    global step_index\n    step_index = (step_index + direction) % 8\n    for i in range(4):\n        pins[i].value(SEQ[step_index][i])\n\ndef rotate_degrees(deg, delay=3):\n    # 28BYJ-48: 半步模式 4096 步/圈\n    steps = int(4096 * deg / 360)\n    for _ in range(steps):\n        step_once(1)\n        time.sleep_ms(delay)\n    # 关闭线圈省电\n    for p in pins:\n        p.off()\n\nstep_index = 0\n\n# 喂食设置\nFEED_HOUR = 8\nFEED_MINUTE = 0\nFEED_ANGLE = 180  # 旋转角度（调整饲料量）\n\ndef main():\n    print(\"自动喂食器已启动...\")\n    print(f\"设置: 每天 {FEED_HOUR:02d}:{FEED_MINUTE:02d} 投喂\")\n    \n    from machine import RTC\n    rtc = RTC()\n    last_feed_day = -1\n    \n    while True:\n        now = rtc.datetime()\n        hour, minute, day = now[4], now[5], now[2]\n        \n        if hour == FEED_HOUR and minute == FEED_MINUTE and day != last_feed_day:\n            print(f\"⏰ 到投喂时间！旋转 {FEED_ANGLE}°\")\n            rotate_degrees(FEED_ANGLE)\n            last_feed_day = day\n            print(f\"✓ {FEED_HOUR:02d}:{FEED_MINUTE:02d} 投喂完成\")\n            time.sleep(60)  # 避免一分钟内重复触发\n        \n        time.sleep(10)\n\nmain()\n",
+    "next_steps": [
+      "3D 打印或改造一个饲料仓固定在步进电机转轴上",
+      "调整 FEED_ANGLE 控制每次投喂量（360° = 一整圈）",
+      "步进电机需 5V 供电，不要直接从 3.3V 取电"
+    ],
+    "troubleshooting": [
+      { "symptom": "电机不转", "checks": [
+        "确认 ULN2003 驱动板接了 5V 电源",
+        "检查 IN1-IN4 接线顺序（顺序错会导致抖动不转）",
+        "用手轻拨转轴，检查机械卡死"
+      ]},
+      { "symptom": "电机抖动不转", "checks": [
+        "IN1-IN4 可能接反了顺序，重新核对",
+        "半步序列延时 delay 调慢（改为 5ms）",
+        "5V 供电不足，尝试外部电源"
+      ]}
+    ],
+    "prerequisite": "需要 28BYJ-48 步进电机 + ULN2003 驱动板（淘宝套装约 ¥8）"
+  },
+  {
+    "trigger_words": ["防盗报警", "报警器", "防盗"],
+    "boost_words": ["门窗", "GSM", "短信", "门磁", "人体感应", "入侵", "安防", "安全", "警报", "SIM800L"],
+    "title": "防盗报警器",
+    "intro": "门窗磁检测到打开时，通过 GSM 模块发送短信到手机",
+    "mcu": "ESP32-S3",
+    "parts": [
+      { "name": "门窗磁传感器", "qty": 1, "note": "干簧管 + 磁铁", "connector": "排针公" },
+      { "name": "GSM 模块", "qty": 1, "note": "SIM800L 模块（需 MicroSIM 卡）", "connector": "排针公" },
+      { "name": "10KΩ 电阻", "qty": 1, "note": "门磁上拉电阻" },
+      { "name": "面包板", "qty": 1, "note": "400 孔面包板" }
+    ],
+    "wiring_lines": [
+      { "from": "门磁传感器一脚", "to": "GPIO5（内部上拉）", "location": "板子左侧第7排，标有 '5'" },
+      { "from": "门磁传感器另一脚", "to": "GND", "location": "板子左上角标有 'GND'" },
+      { "from": "SIM800L TXD", "to": "GPIO18 (UART TX)", "location": "板子右侧第3排，标有 '18'" },
+      { "from": "SIM800L RXD", "to": "GPIO19 (UART RX)", "location": "板子右侧第4排，标有 '19'" },
+      { "from": "SIM800L VCC", "to": "外部 3.7-4.2V 电源", "location": "SIM800L 需独立电源（峰值 2A），不可接板子 3.3V" },
+      { "from": "SIM800L GND", "to": "GND（与 ESP32 共地）", "location": "板子左上角标有 'GND'" }
+    ],
+    "code": "from machine import Pin, UART\nimport time\n\n# 初始化门磁（干簧管）\nmagnetic = Pin(5, Pin.IN, Pin.PULL_UP)\n\n# 初始化 UART（接 SIM800L）\nut = UART(1, baudrate=9600, tx=18, rx=19)\n\n# 主人的手机号\nPHONE_NUMBER = \"+8613800138000\"  # ⚠ 替换为真实号码\n\ndef send_sms(number, message):\n    ut.write(b'AT+CMGF=1\\r\\n')\n    time.sleep(0.5)\n    ut.write(f'AT+CMGS=\"{number}\"\\r\\n'.encode())\n    time.sleep(0.5)\n    ut.write(message.encode())\n    ut.write(bytes([26]))  # Ctrl+Z 发送\n    time.sleep(3)\n    print(\"短信已发送\")\n\ndef main():\n    print(\"防盗报警器已启动...\")\n    print(\"等待 SIM800L 注册网络...\")\n    time.sleep(10)  # 等待 GSM 网络注册\n    \n    last_state = 1\n    alarmed = False\n    \n    while True:\n        state = magnetic.value()\n        # 干簧管在磁铁靠近时为低电平（门关），远离时为高电平（门开）\n        if last_state == 0 and state == 1:  # 门被打开\n            if not alarmed:\n                print(\"⚠ 门被打开！发送报警短信...\")\n                send_sms(PHONE_NUMBER, \"ALERT: 门被打开了！\")\n                alarmed = True\n        elif state == 0:  # 门关闭\n            alarmed = False\n        \n        last_state = state\n        time.sleep(0.5)\n\nmain()\n",
+    "next_steps": [
+      "将 SIM800L 插入有效的 MicroSIM 卡并开通 GSM 功能",
+      "替换代码中的 PHONE_NUMBER 为真实手机号",
+      "门磁固定在门框上，磁铁贴在门扇对应位置",
+      "SIM800L 需独立电源（建议使用 3.7V 锂电池或降压模块）"
+    ],
+    "troubleshooting": [
+      { "symptom": "SIM800L 不注册网络", "checks": [
+        "SIM800L 需独立供电（峰值电流 2A），板子 3.3V 不够",
+        "检查 SIM 卡是否插好、未欠费",
+        "用 AT+CSQ 命令检查信号强度（>10 为正常）"
+      ]},
+      { "symptom": "门磁不触发", "checks": [
+        "磁铁与干簧管的距离应在 1cm 以内",
+        "检查 GPIO5 是否启用内部上拉",
+        "用万用表测干簧管通断确认好坏"
+      ]}
+    ],
+    "prerequisite": "需要 SIM800L GSM 模块 + 有效的 MicroSIM 卡 + 独立 3.7V 电源模块"
+  }
+]

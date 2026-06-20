@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单片机创意平台</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+/* ===== 色彩系统 ===== */
+:root {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #DBEAFE;
+  --color-success: #16A34A;
+  --color-success-light: #DCFCE7;
+  --color-warning: #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-error: #DC2626;
+  --color-error-light: #FEF2F2;
+  --color-text-primary: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-border: #E2E8F0;
+  --color-bg-page: #F8FAFC;
+  --color-bg-card: #FFFFFF;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-3xl) var(--space-lg);
+}
+
+/* ===== 标题 ===== */
+h1 { font-size: 24px; font-weight: 700; margin-bottom: var(--space-md); }
+h2 { font-size: 18px; font-weight: 600; margin-bottom: var(--space-lg); }
+h3 { font-size: 16px; font-weight: 600; }
+
+/* ===== 步骤区块 ===== */
+.step {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.step-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-md);
+}
+
+/* ===== 输入框 ===== */
+.input-group { display: flex; gap: var(--space-md); }
+.input-wrap { flex: 1; }
+
+textarea {
+  width: 100%;
+  height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  transition: border 0.15s, box-shadow 0.15s;
+}
+
+textarea:focus {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  padding: 11px 13px;
+}
+
+textarea.input-error {
+  border: 2px solid var(--color-error);
+}
+
+.error-text {
+  color: var(--color-error);
+  font-size: 12px;
+  margin-top: var(--space-xs);
+  display: none;
+}
+
+.error-text.show { display: block; }
+
+/* ===== 按钮 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.btn-outline:hover:not(:disabled) { background: var(--color-primary-light); }
+
+.btn-success {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.btn-success:hover:not(:disabled) { background: #15803D; }
+
+.btn-block { width: 100%; }
+
+/* ===== 设备状态 ===== */
+.device-status {
+  padding: var(--space-lg);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  transition: all 0.3s;
+}
+
+.device-status.disconnected {
+  opacity: 0.6;
+}
+
+.device-status.connected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  opacity: 1;
+}
+
+.device-status.running {
+  border-color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: var(--space-sm);
+}
+
+.status-dot.gray { background: #94A3B8; }
+.status-dot.blue { background: var(--color-primary); }
+.status-dot.green { background: var(--color-success); }
+.status-check { color: var(--color-success); font-weight: bold; margin-right: var(--space-sm); }
+
+.status-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.status-text { font-size: 14px; font-weight: 500; }
+.status-sub { font-size: 12px; color: var(--color-text-secondary); margin-top: var(--space-xs); }
+
+/* ===== 方案详情 ===== */
+.scheme-title { font-size: 18px; font-weight: 700; margin-bottom: var(--space-sm); }
+.scheme-intro { color: var(--color-text-secondary); margin-bottom: var(--space-lg); }
+.mcu-badge {
+  display: inline-block;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: var(--space-lg);
+}
+
+/* ===== 物料表格 ===== */
+.parts-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-lg);
+  font-size: 14px;
+}
+
+.parts-table th {
+  background: var(--color-bg-page);
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.parts-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.parts-table tr:hover td { background: var(--color-primary-light); }
+.parts-table .col-seq { width: 48px; text-align: center; }
+.parts-table .col-qty { width: 64px; text-align: center; }
+.parts-table .col-note { font-size: 12px; color: var(--color-text-secondary); }
+
+/* ===== 接线列表 ===== */
+.wiring-list {
+  list-style: none;
+  margin-bottom: var(--space-lg);
+}
+
+.wiring-item {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.wiring-item:last-child { border-bottom: none; }
+
+.wiring-location {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ===== 代码块 ===== */
+.code-block {
+  background: #1E293B;
+  color: #E2E8F0;
+  border-radius: 8px;
+  padding: var(--space-lg);
+  font-family: Consolas, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  margin-bottom: var(--space-lg);
+}
+
+.code-actions {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+/* ===== 折叠面板 ===== */
+.collapse-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-bottom: var(--space-md);
+  overflow: hidden;
+}
+
+.collapse-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  user-select: none;
+}
+
+.collapse-header:hover { background: var(--color-bg-page); }
+
+.collapse-arrow {
+  transition: transform 0.3s;
+  color: var(--color-text-secondary);
+}
+
+.collapse-arrow.open { transform: rotate(180deg); }
+
+.collapse-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.collapse-body.open {
+  max-height: 2000px;
+}
+
+.collapse-content {
+  padding: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.collapse-content ol {
+  padding-left: 20px;
+}
+
+.collapse-content li { margin-bottom: var(--space-sm); }
+
+/* ===== 故障排查/未匹配/负面拦截 ===== */
+.message-card {
+  padding: var(--space-lg);
+  border-radius: 8px;
+  margin-bottom: var(--space-lg);
+}
+
+.message-card.warning {
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  color: #92400E;
+}
+
+.message-card.error {
+  background: var(--color-error-light);
+  border: 1px solid var(--color-error);
+  color: #991B1B;
+}
+
+.message-card.info {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  color: #1E40AF;
+}
+
+.message-card h3 { margin-bottom: var(--space-md); }
+.message-card ol { padding-left: 20px; }
+.message-card li { margin-bottom: var(--space-sm); }
+
+/* ===== 标准品劝退卡 ===== */
+.standard-card {
+  text-align: center;
+  padding: var(--space-2xl);
+  border: 2px solid var(--color-warning);
+  border-radius: 8px;
+  background: var(--color-warning-light);
+}
+
+.standard-card h3 { color: #92400E; margin-bottom: var(--space-md); }
+.standard-card p { margin-bottom: var(--space-lg); color: #92400E; }
+.standard-card .price-tag {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-warning);
+  margin: var(--space-md) 0;
+}
+
+.standard-divider {
+  margin: var(--space-lg) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== 下一步按钮区 ===== */
+.step-actions {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+/* ===== 进度条 ===== */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: var(--space-md) 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.3s;
+  width: 0%;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* ===== 隐藏 ===== */
+.hidden { display: none; }
+
+/* ===== USB 提示 ===== */
+.usb-tip {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 12px;
+  color: #1E40AF;
+  margin-bottom: var(--space-md);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 680px) {
+  .container { padding: var(--space-xl) var(--space-lg); }
+  .input-group { flex-direction: column; }
+  .step-actions { flex-direction: column; }
+  .btn-block-mobile { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="container">
+
+    <h1>🧩 单片机创意平台</h1>
+    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-2xl);">
+      输入你的创意，一键生成方案并烧录到 ESP32-S3
+    </p>
+
+    <!-- ===== STEP 1: 创意输入 ===== -->
+    <div class="step">
+      <div class="step-label">STEP 1</div>
+      <h2>输入你的创意</h2>
+      <div class="input-group">
+        <div class="input-wrap">
+          <textarea
+            v-model="inputText"
+            @input="onInputChange"
+            :class="{ 'input-error': showInputError }"
+            placeholder="比如：我想做一个天黑自动亮的台灯"
+            rows="1"
+            ref="inputRef"
+            @keydown.enter.prevent="onGenerate"
+          ></textarea>
+          <div class="error-text" :class="{ show: showInputError }">请输入你的创意</div>
+        </div>
+        <button
+          class="btn btn-primary btn-block-mobile"
+          :disabled="!inputText.trim()"
+          @click="onGenerate"
+        >
+          生成方案
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 2: 方案结果区 ===== -->
+    <div v-if="showResult" class="step" :id="'step2'">
+      <div class="step-label">STEP 2</div>
+      <h2>方案详情</h2>
+
+      <!-- 负面拦截 -->
+      <div v-if="resultType === 'negative'" class="message-card warning">
+        <h3>🔧 检测到故障排查需求</h3>
+        <p>{{ resultMessage }}</p>
+        <ol>
+          <li v-for="(item, i) in result.troubleshooting" :key="i">{{ item }}</li>
+        </ol>
+      </div>
+
+      <!-- 标准品劝退 -->
+      <div v-else-if="resultType === 'standard'" class="standard-card">
+        <h3>🛒 这个真的不用自己做</h3>
+        <p>{{ result.product.message }}</p>
+        <div class="price-tag">{{ result.product.price }}</div>
+        <p>淘宝直接买一个，省时省力</p>
+        <hr class="standard-divider">
+        <button class="btn btn-outline" @click="onForceDIY">坚持要做？点击查看 DIY 方案 →</button>
+      </div>
+
+      <!-- 未匹配 -->
+      <div v-else-if="resultType === 'no_match'" class="message-card info">
+        <h3>💡 {{ resultMessage }}</h3>
+        <p>试试换个说法，比如：</p>
+        <ul style="margin-top: var(--space-sm); padding-left: 20px;">
+          <li>天黑自动亮的台灯</li>
+          <li>自动浇花</li>
+          <li>温湿度计</li>
+        </ul>
+      </div>
+
+      <!-- 匹配成功 -->
+      <div v-else-if="resultType === 'match'">
+        <div class="scheme-title">{{ result.scheme.title }}</div>
+        <div class="scheme-intro">{{ result.scheme.intro }}</div>
+        <div class="mcu-badge">推荐芯片：{{ result.scheme.mcu }}</div>
+
+        <!-- 物料清单 -->
+        <h3 style="margin-bottom: var(--space-md);">物料清单</h3>
+        <table class="parts-table">
+          <thead>
+            <tr>
+              <th class="col-seq">#</th>
+              <th>名称</th>
+              <th class="col-qty">数量</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(part, i) in partsWithDupont" :key="i">
+              <td class="col-seq">{{ i + 1 }}</td>
+              <td>{{ part.name }}</td>
+              <td class="col-qty">{{ part.qty }}</td>
+              <td class="col-note">{{ part.note || '' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 接线引脚 -->
+        <h3 style="margin-bottom: var(--space-md);">接线说明</h3>
+        <ul class="wiring-list">
+          <li class="wiring-item" v-for="(line, i) in result.scheme.wiring_lines" :key="i">
+            <strong>{{ line.from }}</strong> → <strong>{{ line.to }}</strong>
+            <div class="wiring-location">{{ line.location }}</div>
+          </li>
+        </ul>
+
+        <!-- 代码 -->
+        <h3 style="margin-bottom: var(--space-md);">MicroPython 代码</h3>
+        <div class="code-actions">
+          <button class="btn btn-outline" @click="onDownloadCode">📥 下载 main.py</button>
+        </div>
+        <div class="code-block">{{ result.scheme.code }}</div>
+
+        <!-- 下一步 -->
+        <h3 style="margin-bottom: var(--space-md);">后续步骤</h3>
+        <ol style="padding-left: 20px; margin-bottom: var(--space-lg);">
+          <li v-for="(step, i) in result.scheme.next_steps" :key="i" style="margin-bottom: var(--space-sm);">{{ step }}</li>
+        </ol>
+
+        <!-- 故障排查 -->
+        <div class="collapse-panel" v-for="(item, i) in result.scheme.troubleshooting" :key="i">
+          <div class="collapse-header" @click="toggleTrouble(i)">
+            <span>🔍 {{ item.symptom }}</span>
+            <span class="collapse-arrow" :class="{ open: troubleOpen[i] }">▼</span>
+          </div>
+          <div class="collapse-body" :class="{ open: troubleOpen[i] }">
+            <div class="collapse-content">
+              <ol>
+                <li v-for="(check, j) in item.checks" :key="j">{{ check }}</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 试试另一个 -->
+      <div style="text-align: center; margin-top: var(--space-lg);" v-if="resultType !== 'negative'">
+        <a href="#" @click.prevent="onReset" style="color: var(--color-primary); font-size: 14px;">→ 试试另一个创意</a>
+      </div>
+    </div>
+
+    <!-- ===== STEP 3: 设备状态 ===== -->
+    <div v-if="showDevice" class="step">
+      <div class="step-label">STEP 3</div>
+      <h2>设备状态</h2>
+
+      <div class="usb-tip">
+        ⚡ 需要先用 USB 数据线连接 ESP32 和电脑（不能是充电线）
+      </div>
+
+      <div class="device-status" :class="deviceStatusClass">
+        <!-- 未连接 -->
+        <template v-if="deviceState === 'disconnected'">
+          <div class="status-row">
+            <span class="status-dot gray"></span>
+            <span class="status-text">未连接</span>
+          </div>
+          <button class="btn btn-primary btn-block" @click="onDetectDevice" :disabled="connecting">
+            {{ connecting ? '检测中...' : '检测设备' }}
+          </button>
+        </template>
+
+        <!-- 已检测到 -->
+        <template v-else-if="deviceState === 'connected'">
+          <div class="status-row">
+            <span class="status-dot blue"></span>
+            <span class="status-text">已检测到 ESP32-S3</span>
+          </div>
+          <div class="status-sub" v-if="portInfo">{{ portInfo }}</div>
+
+          <template v-if="!flashing">
+            <button class="btn btn-success btn-block" style="margin-top: var(--space-md);" @click="onFlashDevice">
+              一键安装运行
+            </button>
+          </template>
+
+          <template v-else>
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: flashProgress + '%' }"></div>
+            </div>
+            <div class="progress-text">{{ flashStatusText }}</div>
+          </template>
+        </template>
+
+        <!-- 运行中 -->
+        <template v-else-if="deviceState === 'running'">
+          <div class="status-row">
+            <span class="status-check">✓</span>
+            <span class="status-text">运行中 — 设备正在执行你的程序</span>
+          </div>
+          <div class="status-sub" style="margin-top: var(--space-md);">遇到问题？查看上方故障排查指南 →</div>
+          <button class="btn btn-outline btn-block" style="margin-top: var(--space-md);" @click="onResetDevice">
+            重新烧录
+          </button>
+        </template>
+      </div>
+
+      <!-- 手动烧录备选 -->
+      <div class="collapse-panel" style="margin-top: var(--space-md);">
+        <div class="collapse-header" @click="toggleManual">
+          <span>📖 手动烧录步骤</span>
+          <span class="collapse-arrow" :class="{ open: manualOpen }">▼</span>
+        </div>
+        <div class="collapse-body" :class="{ open: manualOpen }">
+          <div class="collapse-content">
+            <p style="margin-bottom: var(--space-md); color: var(--color-error);">
+              ⚠️ 如果一键安装失败，先执行恢复操作：
+            </p>
+            <ol>
+              <li>按住 ESP32 上的 BOOT 键不放</li>
+              <li>按一下 EN 键然后松开</li>
+              <li>松开 BOOT 键</li>
+            </ol>
+            <hr style="margin: var(--space-md) 0; border: none; border-top: 1px solid var(--color-border);">
+            <p style="margin-bottom: var(--space-md);">手动步骤：</p>
+            <ol>
+              <li>下载 MicroPython 固件 → <button class="btn btn-outline" style="height: 32px; font-size: 12px; padding: 0 12px;" @click="alert('请访问 micropython.org 下载 ESP32-S3 固件')">下载固件</button></li>
+              <li>安装 Thonny（thonny.org，一路下一步）</li>
+              <li>在 Thonny 中：工具 → 选项 → 解释器 → 选择"MicroPython (ESP32)" → 点击"安装或更新 MicroPython"</li>
+              <li>将下载的 main.py 拖入 Thonny 文件区，按 F5 运行</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div style="text-align: center; padding: var(--space-2xl) 0; color: var(--color-text-secondary); font-size: 12px;">
+      单片机创意平台 V0.1 Demo — 仅支持 Chrome/Edge 89+
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch } = Vue;
+
+createApp({
+  setup() {
+    const inputText = ref('');
+    const inputRef = ref(null);
+    const showInputError = ref(false);
+    const showResult = ref(false);
+    const showDevice = ref(false);
+    const resultType = ref('');
+    const result = ref({});
+    const resultMessage = ref('');
+    const troubleOpen = ref({});
+    const manualOpen = ref(false);
+
+    // 设备状态
+    const deviceState = ref('disconnected'); // disconnected | connected | running
+    const portInfo = ref('');
+    const connecting = ref(false);
+    const flashing = ref(false);
+    const flashProgress = ref(0);
+    const flashStatusText = ref('');
+    let serialPort = null;
+    let serialReader = null;
+
+    // 计算属性：含杜邦线的物料清单
+    const partsWithDupont = computed(() => {
+      if (!result.value.scheme) return [];
+      const parts = [...(result.value.scheme.parts || [])];
+
+      // 自动追加杜邦线
+      const hasMalePin = parts.some(p => p.connector === '排针公');
+      const dupontName = hasMalePin ? '母对母杜邦线' : '公对母杜邦线';
+      parts.push({ name: dupontName, qty: 6, note: '连接传感器与开发板' });
+
+      return parts;
+    });
+
+    const deviceStatusClass = computed(() => {
+      if (deviceState.value === 'disconnected') return 'disconnected';
+      if (deviceState.value === 'connected') return 'connected';
+      if (deviceState.value === 'running') return 'running';
+      return '';
+    });
+
+    // 输入变化即重置
+    function onInputChange() {
+      if (showResult.value) {
+        showResult.value = false;
+        showDevice.value = false;
+        resultType.value = '';
+        result.value = {};
+        troubleOpen.value = {};
+      }
+      showInputError.value = false;
+    }
+
+    // 生成方案
+    async function onGenerate() {
+      const text = inputText.value.trim();
+      if (!text) {
+        showInputError.value = true;
+        return;
+      }
+      showInputError.value = false;
+
+      try {
+        console.log('发送请求:', text);
+        const resp = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, skip_standard: false })
+        });
+        const data = await resp.json();
+        console.log('返回结果:', data);
+
+        result.value = data;
+        resultType.value = data.type;
+        resultMessage.value = data.message || '';
+
+        if (data.type === 'match' || data.type === 'no_match' || data.type === 'negative') {
+          showResult.value = true;
+          if (data.type === 'match') {
+            showDevice.value = true;
+          }
+        } else if (data.type === 'standard') {
+          showResult.value = true;
+          showDevice.value = false;
+        } else {
+          showResult.value = true;
+        }
+      } catch (err) {
+        console.error('请求失败:', err);
+        resultType.value = 'error';
+        resultMessage.value = '网络错误，请确保后端已启动';
+        showResult.value = true;
+      }
+    }
+
+    // 试试另一个创意
+    function onReset() {
+      inputText.value = '';
+      showResult.value = false;
+      showDevice.value = false;
+      resultType.value = '';
+      result.value = {};
+      troubleOpen.value = {};
+      if (inputRef.value) inputRef.value.focus();
+    }
+
+    // 标准品-坚持要做
+    async function onForceDIY() {
+      try {
+        const resp = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: inputText.value.trim(), skip_standard: true })
+        });
+        const data = await resp.json();
+        result.value = data;
+        resultType.value = data.type;
+        resultMessage.value = data.message || '';
+        if (data.type === 'match') {
+          showDevice.value = true;
+        }
+      } catch (err) {
+        console.error('请求失败:', err);
+      }
+    }
+
+    // 故障排查折叠
+    function toggleTrouble(i) {
+      troubleOpen.value = { ...troubleOpen.value, [i]: !troubleOpen.value[i] };
+    }
+
+    // 手动烧录折叠
+    function toggleManual() {
+      manualOpen.value = !manualOpen.value;
+    }
+
+    // 下载代码
+    function onDownloadCode() {
+      if (!result.value.scheme || !result.value.scheme.code) return;
+      const blob = new Blob([result.value.scheme.code], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'main.py';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Web Serial — 检测设备
+    async function onDetectDevice() {
+      if (!('serial' in navigator)) {
+        alert('当前浏览器不支持 Web Serial API，请使用 Chrome 或 Edge 89+。\n\n可展开下方"手动烧录步骤"进行操作。');
+        return;
+      }
+
+      connecting.value = true;
+      try {
+        const port = await navigator.serial.requestPort();
+        serialPort = port;
+        const info = port.getInfo();
+        portInfo.value = `COM端口 (${info.usbVendorId ? `VID:${info.usbVendorId.toString(16)}` : '已识别'})`;
+
+        // 注册断开事件
+        port.addEventListener('disconnect', () => {
+          deviceState.value = 'disconnected';
+          portInfo.value = '';
+          serialPort = null;
+        });
+
+        deviceState.value = 'connected';
+      } catch (err) {
+        console.error('端口选择失败:', err);
+        alert('未选择端口或选择失败');
+      } finally {
+        connecting.value = false;
+      }
+    }
+
+    // 一键安装运行（模拟）
+    async function onFlashDevice() {
+      if (!serialPort) {
+        alert('请先检测设备');
+        return;
+      }
+
+      flashing.value = true;
+      flashProgress.value = 0;
+      flashStatusText.value = '正在擦除 Flash...';
+
+      // 模拟烧录进度
+      const stages = [
+        { pct: 20, text: '正在擦除 Flash...' },
+        { pct: 50, text: '正在写入 MicroPython 固件...' },
+        { pct: 80, text: '正在验证固件...' },
+        { pct: 95, text: '正在上传 main.py...' },
+        { pct: 100, text: '设备复位中...' }
+      ];
+
+      for (const stage of stages) {
+        await new Promise(r => setTimeout(r, 800));
+        flashProgress.value = stage.pct;
+        flashStatusText.value = stage.text;
+      }
+
+      await new Promise(r => setTimeout(r, 500));
+      flashing.value = false;
+      deviceState.value = 'running';
+    }
+
+    function onResetDevice() {
+      deviceState.value = 'connected';
+      flashProgress.value = 0;
+      flashStatusText.value = '';
+    }
+
+    return {
+      inputText, inputRef, showInputError, showResult, showDevice,
+      resultType, result, resultMessage,
+      partsWithDupont, troubleOpen, manualOpen,
+      deviceState, portInfo, connecting, flashing, flashProgress, flashStatusText,
+      deviceStatusClass,
+      onInputChange, onGenerate, onReset, onForceDIY,
+      toggleTrouble, toggleManual, onDownloadCode,
+      onDetectDevice, onFlashDevice, onResetDevice
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
