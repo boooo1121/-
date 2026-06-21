@@ -433,6 +433,177 @@ textarea.input-error {
   .step-actions { flex-direction: column; }
   .btn-block-mobile { width: 100%; }
 }
+
+/* ===== AI 助手聊天浮窗 ===== */
+.chat-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  z-index: 1000;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.chat-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+}
+.chat-toggle-close {
+  background: var(--color-text-secondary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.chat-panel {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 380px;
+  height: 520px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.chat-header {
+  background: var(--color-primary);
+  color: #fff;
+  padding: 14px var(--space-lg);
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chat-header-close {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  opacity: 0.8;
+}
+.chat-header-close:hover { opacity: 1; }
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  background: var(--color-bg-page);
+}
+.chat-msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-msg.user {
+  align-self: flex-end;
+  background: var(--color-primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.chat-msg.assistant {
+  align-self: flex-start;
+  background: #fff;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: 4px;
+}
+.chat-msg.system {
+  align-self: center;
+  background: var(--color-primary-light);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  border-radius: 8px;
+  max-width: 100%;
+}
+.chat-msg.typing {
+  align-self: flex-start;
+  background: #fff;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: 4px;
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+}
+.chat-msg.typing span {
+  animation: dotPulse 1.4s infinite;
+  font-size: 18px;
+  line-height: 1;
+}
+.chat-msg.typing span:nth-child(2) { animation-delay: 0.2s; }
+.chat-msg.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+.chat-input-area {
+  display: flex;
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  background: #fff;
+  gap: var(--space-sm);
+}
+.chat-input {
+  flex: 1;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.chat-input:focus {
+  border-color: var(--color-primary);
+}
+.chat-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.chat-send:hover { background: var(--color-primary-hover); }
+.chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 480px) {
+  .chat-panel {
+    right: 8px;
+    bottom: 80px;
+    width: calc(100% - 16px);
+    height: 60vh;
+  }
+  .chat-toggle {
+    bottom: 16px;
+    right: 16px;
+  }
+}
 </style>
 </head>
 <body>
@@ -667,6 +838,34 @@ textarea.input-error {
       单片机创意平台 V0.1 Demo — 仅支持 Chrome/Edge 89+
     </div>
   </div>
+
+  <!-- AI 助手浮窗 -->
+  <button class="chat-toggle" :class="{'chat-toggle-close': chatOpen}" @click="chatOpen = !chatOpen">
+    {{ chatOpen ? '✕' : '💬' }}
+  </button>
+
+  <div class="chat-panel" v-if="chatOpen">
+    <div class="chat-header">
+      <span>🤖 小bo助手</span>
+      <button class="chat-header-close" @click="chatOpen = false">✕</button>
+    </div>
+    <div class="chat-messages" ref="chatMsgRef">
+      <div v-for="(msg, i) in chatMessages" :key="i"
+        class="chat-msg" :class="msg.role"
+        v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content">
+      </div>
+      <div class="chat-msg typing" v-if="chatLoading">
+        <span>·</span><span>·</span><span>·</span>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input class="chat-input" v-model="chatInput" @keyup.enter="onChatSend"
+        placeholder="问小bo任何问题..." :disabled="chatLoading" />
+      <button class="chat-send" @click="onChatSend" :disabled="!chatInput.trim() || chatLoading">
+        ➤
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -889,6 +1088,73 @@ createApp({
       flashStatusText.value = '';
     }
 
+    // ===== AI 助手聊天 =====
+    const chatOpen = ref(false);
+    const chatInput = ref('');
+    const chatLoading = ref(false);
+    const chatMessages = ref([
+      { role: 'system', content: '👋 你好！我是小bo，你的单片机创意助手。有什么问题尽管问我！' }
+    ]);
+    const chatMsgRef = ref(null);
+
+    function scrollChat() {
+      setTimeout(() => {
+        if (chatMsgRef.value) {
+          chatMsgRef.value.scrollTop = chatMsgRef.value.scrollHeight;
+        }
+      }, 50);
+    }
+
+    function renderMarkdown(text) {
+      // 简单渲染：代码块、加粗、换行
+      let html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      // 代码块 ``` ```
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+      // 行内代码 ` `
+      html = html.replace(/`([^`]+)`/g, '<code style="background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:13px;">$1</code>');
+      // 加粗
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      // 换行
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    async function onChatSend() {
+      const text = chatInput.value.trim();
+      if (!text || chatLoading.value) return;
+
+      chatMessages.value.push({ role: 'user', content: text });
+      chatInput.value = '';
+      chatLoading.value = true;
+      scrollChat();
+
+      try {
+        const msgs = chatMessages.value
+          .filter(m => m.role !== 'system')
+          .slice(-20)
+          .map(m => ({ role: m.role, content: m.content }));
+
+        const resp = await fetch('/api/agent/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: msgs, temperature: 0.7 })
+        });
+        const data = await resp.json();
+        chatMessages.value.push({ role: 'assistant', content: data.reply });
+      } catch (err) {
+        chatMessages.value.push({
+          role: 'assistant',
+          content: '⚠️ 网络异常，请稍后重试'
+        });
+      } finally {
+        chatLoading.value = false;
+        scrollChat();
+      }
+    }
+
     return {
       inputText, inputRef, showInputError, showResult, showDevice,
       resultType, result, resultMessage,
@@ -897,7 +1163,9 @@ createApp({
       deviceStatusClass,
       onInputChange, onGenerate, onReset, onForceDIY,
       toggleTrouble, toggleManual, onDownloadCode,
-      onDetectDevice, onFlashDevice, onResetDevice
+      onDetectDevice, onFlashDevice, onResetDevice,
+      chatOpen, chatInput, chatLoading, chatMessages, chatMsgRef,
+      onChatSend, renderMarkdown
     };
   }
 }).mount('#app');
